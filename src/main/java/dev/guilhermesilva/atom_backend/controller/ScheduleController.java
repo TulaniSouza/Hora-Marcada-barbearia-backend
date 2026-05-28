@@ -5,6 +5,7 @@ import dev.guilhermesilva.atom_backend.dto.response.BarberScheduleResponse;
 import dev.guilhermesilva.atom_backend.enums.AppointmentStatus;
 import dev.guilhermesilva.atom_backend.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,8 @@ import java.util.List;
 @RequestMapping("/api")
 @RestController
 @RequiredArgsConstructor
+
+@Tag(name = "Horarios", description = "Horários disponíveis para agendamento")
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
