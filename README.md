@@ -51,11 +51,22 @@ Documentação e testes:
 
 Endpoints principais (resumo):
 
-- `POST /auth/login` - Autenticar usuário e receber token JWT.
-- `POST /appointments` - Criar agendamento.
-- `GET /appointments` - Listar agendamentos.
-- `PUT /appointments/{id}` - Atualizar status/detalhes do agendamento.
-- `GET /service-types` - Listar tipos de serviço.
+- `POST /api/auth/register` - Registrar novo barbeiro (retorna token JWT).
+- `POST /api/auth/login` - Autenticar usuário e receber token JWT.
+- `POST /api/appointments` - Criar agendamento.
+- `GET /api/appointments` - Listar agendamentos.
+- `GET /api/appointments/date?date=YYYY-MM-DD` - Buscar agendamentos por data.
+- `GET /api/appointments/date/scheduled?date=YYYY-MM-DD` - Buscar agendamentos marcados por data.
+- `PATCH /api/appointments/{id}/cancel` - Cancelar um agendamento pelo ID.
+- `PATCH /api/appointments/{id}/complete` - Concluir um agendamento pelo ID.
+- `GET /api/appointments/available-times?date=YYYY-MM-DD&serviceTypeId=ID` - Horários disponíveis para um tipo de serviço na data informada.
+- `GET /api/barber/schedule?date=YYYY-MM-DD[&status=STATUS]` - Agenda do barbeiro para a data (opcional `status`).
+- `POST /api/service-types` - Criar tipo de serviço.
+- `GET /api/service-types` - Listar tipos de serviço.
+- `GET /api/service-types/active` - Listar apenas tipos de serviço ativos.
+- `GET /api/service-types/{id}` - Buscar tipo de serviço pelo ID.
+- `PUT /api/service-types/{id}` - Atualizar tipo de serviço pelo ID.
+- `DELETE /api/service-types/{id}` - Desativar tipo de serviço pelo ID.
 
 Observações:
 
