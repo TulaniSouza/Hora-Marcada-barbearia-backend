@@ -51,7 +51,7 @@ public class ScheduleService {
 
         List<Appointment> scheduledAppointments = appointmentRepository
                 .findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
-                        AppointmentStatus.AGENDADO,
+                        AppointmentStatus.SCHEDULED,
                         startOfDay,
                         endOfDay
                 );
@@ -96,9 +96,9 @@ public class ScheduleService {
         return BarberScheduleResponse.builder()
                 .date(date)
                 .totalAppointments(appointments.size())
-                .scheduledAppointments(countByStatus(appointments, AppointmentStatus.AGENDADO))
-                .cancelledAppointments(countByStatus(appointments, AppointmentStatus.CANCELADO))
-                .completedAppointments(countByStatus(appointments, AppointmentStatus.FINALIZADO))
+                .scheduledAppointments(countByStatus(appointments, AppointmentStatus.SCHEDULED))
+                .cancelledAppointments(countByStatus(appointments, AppointmentStatus.CANCELLED))
+                .completedAppointments(countByStatus(appointments, AppointmentStatus.COMPLETED))
                 .appointments(appointmentResponses)
                 .build();
     }

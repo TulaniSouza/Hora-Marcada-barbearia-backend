@@ -50,7 +50,7 @@ public class Appointment {
         this.updatedAt = now;
 
         if (this.status == null) {
-            this.status = AppointmentStatus.AGENDADO;
+            this.status = AppointmentStatus.SCHEDULED;
         }
     }
 

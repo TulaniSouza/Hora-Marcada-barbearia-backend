@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/service-types/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/appointments/available-times").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/appointments").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/barber/schedule").permitAll()
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
