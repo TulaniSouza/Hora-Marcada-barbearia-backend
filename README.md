@@ -44,6 +44,16 @@ Build do jar:
 mvnw.cmd clean package
 ```
 
+Execução com Docker:
+
+```bash
+docker compose up --build
+```
+
+Isso sobe a API na porta `8080` e o Postgres na porta `5432`. A API já vem configurada para usar as variáveis de ambiente do `docker-compose.yml`, mas você também pode apontar para um Postgres externo alterando `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD`.
+
+Se quiser subir só a imagem da API e conectar em um banco já existente, use as mesmas variáveis no `docker run`.
+
 Documentação e testes:
 
 - A API expõe documentação OpenAPI/Swagger conforme configurado em `OpenApiConfig`.
@@ -72,4 +82,5 @@ Observações:
 
 - Ajuste as configurações de banco em `src/main/resources/application.properties` conforme necessário.
 - As migrations iniciais estão em `src/main/resources/db` e são aplicadas pela configuração do banco durante a inicialização (dependendo da configuração do projeto).
+- O segredo JWT também pode ser sobrescrito via `JWT_SECRET_KEY`.
 
