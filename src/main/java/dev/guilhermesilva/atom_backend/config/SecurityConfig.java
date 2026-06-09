@@ -55,8 +55,10 @@ public class SecurityConfig {
                         // Public route
                         .requestMatchers(HttpMethod.GET, "/api/service-types/active").permitAll()
 
+                        // Shared routes
+                        .requestMatchers(HttpMethod.GET, "/api/barbers").hasAnyRole("CUSTOMER", "BARBER")
+
                         // Customer routes
-                        .requestMatchers(HttpMethod.GET, "/api/barbers").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/appointments/available-times").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.POST, "/api/appointments").hasRole("CUSTOMER")
 

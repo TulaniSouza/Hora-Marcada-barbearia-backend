@@ -5,6 +5,7 @@ import dev.guilhermesilva.atom_backend.dto.response.ApiResponse;
 import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 @RequestMapping("/api/appointments")
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Agendamentos", description = "Gerenciamento de agendamentos")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
