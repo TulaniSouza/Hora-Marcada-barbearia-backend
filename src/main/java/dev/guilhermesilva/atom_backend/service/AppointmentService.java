@@ -3,14 +3,21 @@ package dev.guilhermesilva.atom_backend.service;
 import dev.guilhermesilva.atom_backend.dto.request.AppointmentRequest;
 import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.entity.Appointment;
+import dev.guilhermesilva.atom_backend.entity.Barber;
+import dev.guilhermesilva.atom_backend.entity.Customer;
 import dev.guilhermesilva.atom_backend.entity.ServiceType;
 import dev.guilhermesilva.atom_backend.enums.AppointmentStatus;
 import dev.guilhermesilva.atom_backend.exception.BusinessException;
-import dev.guilhermesilva.atom_backend.exception.ResourceNotFoundException; // Adicionado para garantir a compilação
+import dev.guilhermesilva.atom_backend.exception.ResourceNotFoundException;
 import dev.guilhermesilva.atom_backend.mapper.AppointmentMapper;
 import dev.guilhermesilva.atom_backend.repository.AppointmentRepository;
+import dev.guilhermesilva.atom_backend.repository.BarberRepository;
+import dev.guilhermesilva.atom_backend.repository.CustomerRepository;
 import dev.guilhermesilva.atom_backend.repository.ServiceTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,17 +31,22 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AppointmentService {
 
-    private final AppointmentRepository appointmentRepository;
-    private final ServiceTypeRepository serviceTypeRepository;
-    private final AppointmentMapper appointmentMapper;
-
     private static final LocalTime OPENING_TIME = LocalTime.of(9, 0);
     private static final LocalTime CLOSING_TIME = LocalTime.of(18, 0);
-
     private static final int SLOT_INTERVAL_IN_MINUTES = 30;
+
+    private final AppointmentRepository appointmentRepository;
+    private final ServiceTypeRepository serviceTypeRepository;
+    private final CustomerRepository customerRepository;
+    private final BarberRepository barberRepository;
+    private final AppointmentMapper appointmentMapper;
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest request) {
+        Customer customer = getAuthenticatedCustomer();
+
+        Barber barber = findBarberById(request.getBarberId());
+
         ServiceType serviceType = findActiveServiceTypeById(request.getServiceTypeId());
 
         LocalDateTime appointmentDateTime = LocalDateTime.of(
@@ -46,11 +58,17 @@ public class AppointmentService {
         validateAppointmentIsInFuture(appointmentDateTime);
         validateAppointmentTimeSlot(appointmentDateTime);
         validateAppointmentWithinBusinessHours(appointmentDateTime, serviceType);
-        validateAppointmentAvailability(appointmentDateTime, serviceType);
+        validateAppointmentAvailability(
+                barber.getId(),
+                appointmentDateTime,
+                serviceType
+        );
 
         Appointment appointment = appointmentMapper.toEntity(
                 request,
                 serviceType,
+                customer,
+                barber,
                 appointmentDateTime
         );
 
@@ -60,39 +78,22 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> findAll() {
-        return appointmentRepository.findAll()
-                .stream()
-                .map(appointmentMapper::toResponse)
-                .toList();
+    public Page<AppointmentResponse> findAllPaginated(Pageable pageable) {
+        return appointmentRepository.findAll(pageable)
+                .map(appointmentMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> findByDate(LocalDate date) {
+    public Page<AppointmentResponse> findByDatePaginated(
+            LocalDate date,
+            Pageable pageable
+    ) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
 
         return appointmentRepository
-                .findByAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(startOfDay, endOfDay)
-                .stream()
-                .map(appointmentMapper::toResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<AppointmentResponse> findScheduledByDate(LocalDate date) {
-        LocalDateTime startOfDay = date.atStartOfDay();
-        LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
-
-        return appointmentRepository
-                .findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
-                        AppointmentStatus.SCHEDULED,
-                        startOfDay,
-                        endOfDay
-                )
-                .stream()
-                .map(appointmentMapper::toResponse)
-                .toList();
+                .findByAppointmentDateTimeBetween(startOfDay, endOfDay, pageable)
+                .map(appointmentMapper::toResponse);
     }
 
     @Transactional
@@ -100,11 +101,11 @@ public class AppointmentService {
         Appointment appointment = findAppointmentById(id);
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new BusinessException("Este agendamento já está cancelado.");
+            throw new BusinessException("Appointment is already cancelled");
         }
 
         if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new BusinessException("Um agendamento concluído não pode ser cancelado.");
+            throw new BusinessException("Completed appointment cannot be cancelled");
         }
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
@@ -119,11 +120,11 @@ public class AppointmentService {
         Appointment appointment = findAppointmentById(id);
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new BusinessException("Um agendamento cancelado não pode ser concluído.");
+            throw new BusinessException("Cancelled appointment cannot be completed");
         }
 
         if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new BusinessException("Este agendamento já está concluído.");
+            throw new BusinessException("Appointment is already completed");
         }
 
         appointment.setStatus(AppointmentStatus.COMPLETED);
@@ -133,27 +134,76 @@ public class AppointmentService {
         return appointmentMapper.toResponse(updatedAppointment);
     }
 
+    private Customer getAuthenticatedCustomer() {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        return customerRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    }
+
+    private Barber findBarberById(Long barberId) {
+        return barberRepository.findById(barberId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Barber not found with id: " + barberId
+                ));
+    }
+
     private ServiceType findActiveServiceTypeById(Long serviceTypeId) {
         return serviceTypeRepository.findByIdAndActiveTrue(serviceTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Tipo de serviço ativo não encontrado com o ID: " + serviceTypeId
+                        "Active service type not found with id: " + serviceTypeId
                 ));
     }
 
     private Appointment findAppointmentById(Long id) {
         return appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Agendamento não encontrado com o ID: " + id
+                        "Appointment not found with id: " + id
                 ));
+    }
+
+    private void validateBusinessDay(LocalDate date) {
+        if (date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            throw new BusinessException("The barbershop is closed on Sundays");
+        }
     }
 
     private void validateAppointmentIsInFuture(LocalDateTime appointmentDateTime) {
         if (appointmentDateTime.isBefore(LocalDateTime.now())) {
-            throw new BusinessException("A data e hora do agendamento devem ser no futuro.");
+            throw new BusinessException("Appointment date and time must be in the future");
+        }
+    }
+
+    private void validateAppointmentTimeSlot(LocalDateTime appointmentDateTime) {
+        int minute = appointmentDateTime.getMinute();
+
+        if (minute % SLOT_INTERVAL_IN_MINUTES != 0) {
+            throw new BusinessException("Appointment time must follow the configured time slot interval");
+        }
+    }
+
+    private void validateAppointmentWithinBusinessHours(
+            LocalDateTime appointmentDateTime,
+            ServiceType serviceType
+    ) {
+        LocalTime appointmentStartTime = appointmentDateTime.toLocalTime();
+        LocalTime appointmentEndTime = appointmentStartTime.plusMinutes(
+                serviceType.getDurationInMinutes()
+        );
+
+        if (appointmentStartTime.isBefore(OPENING_TIME)) {
+            throw new BusinessException("Appointment time is before opening time");
+        }
+
+        if (appointmentEndTime.isAfter(CLOSING_TIME)) {
+            throw new BusinessException("Appointment time exceeds closing time");
         }
     }
 
     private void validateAppointmentAvailability(
+            Long barberId,
             LocalDateTime newAppointmentStart,
             ServiceType newServiceType
     ) {
@@ -161,7 +211,8 @@ public class AppointmentService {
         LocalDateTime endOfDay = newAppointmentStart.toLocalDate().plusDays(1).atStartOfDay();
 
         List<Appointment> scheduledAppointments = appointmentRepository
-                .findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                .findByBarberIdAndStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                        barberId,
                         AppointmentStatus.SCHEDULED,
                         startOfDay,
                         endOfDay
@@ -183,38 +234,7 @@ public class AppointmentService {
                 });
 
         if (hasConflict) {
-            throw new BusinessException("Já existe um agendamento marcado para este horário.");
+            throw new BusinessException("There is already an appointment scheduled for this barber at this time");
         }
     }
-    private void validateBusinessDay(LocalDate date) {
-        if (date.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            throw new BusinessException("Barbearia está fechada aos domingos.");
-        }
-    }
-
-    private void validateAppointmentWithinBusinessHours(
-            LocalDateTime appointmentDateTime,
-            ServiceType serviceType
-    ) {
-        LocalTime appointmentStartTime = appointmentDateTime.toLocalTime();
-        LocalTime appointmentEndTime = appointmentStartTime.plusMinutes(
-                serviceType.getDurationInMinutes()
-        );
-
-        if (appointmentStartTime.isBefore(OPENING_TIME)) {
-            throw new BusinessException("Appointment time is before opening time");
-        }
-
-        if (appointmentEndTime.isAfter(CLOSING_TIME)) {
-            throw new BusinessException("Appointment time exceeds closing time");
-        }
-    }
-    private void validateAppointmentTimeSlot(LocalDateTime appointmentDateTime) {
-        int minute = appointmentDateTime.getMinute();
-
-        if (minute % SLOT_INTERVAL_IN_MINUTES != 0) {
-            throw new BusinessException("Appointment time must follow the configured time slot interval");
-        }
-    }
-
 }

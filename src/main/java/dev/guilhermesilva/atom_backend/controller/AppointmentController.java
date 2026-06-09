@@ -1,87 +1,90 @@
 package dev.guilhermesilva.atom_backend.controller;
 
 import dev.guilhermesilva.atom_backend.dto.request.AppointmentRequest;
+import dev.guilhermesilva.atom_backend.dto.response.ApiResponse;
 import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
-@RestController
 @RequestMapping("/api/appointments")
+@RestController
 @RequiredArgsConstructor
-@Tag(name = "Agendamentos", description = "Gerenciamento de agendamentos de serviços")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
-    @Operation(summary = "Cria um novo agendamento")
+        @Operation(summary = "Criar um novo agendamento")
     @PostMapping
-    public ResponseEntity<AppointmentResponse> create(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> create(
             @Valid @RequestBody AppointmentRequest request
     ) {
         AppointmentResponse response = appointmentService.create(request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Appointment created successfully", response));
     }
 
-    @Operation(summary = "Lista todos os agendamentos")
+        @Operation(summary = "Listar agendamentos com paginação")
     @GetMapping
-    public ResponseEntity<List<AppointmentResponse>> findAll() {
-        List<AppointmentResponse> response = appointmentService.findAll();
+    public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> findAll(
+            Pageable pageable
+    ) {
+        Page<AppointmentResponse> response = appointmentService.findAllPaginated(pageable);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success("Appointments found successfully", response)
+        );
     }
 
-    @Operation(summary = "Busca agendamentos por data")
+        @Operation(summary = "Listar agendamentos por data com paginação")
     @GetMapping("/date")
-    public ResponseEntity<List<AppointmentResponse>> findByDate(
+    public ResponseEntity<ApiResponse<Page<AppointmentResponse>>> findByDate(
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate date
+            LocalDate date,
+            Pageable pageable
     ) {
-        List<AppointmentResponse> response = appointmentService.findByDate(date);
+        Page<AppointmentResponse> response = appointmentService.findByDatePaginated(
+                date,
+                pageable
+        );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success("Appointments found successfully", response)
+        );
     }
 
-    @Operation(summary = "Busca agendamentos marcados por data")
-    @GetMapping("/date/scheduled")
-    public ResponseEntity<List<AppointmentResponse>> findScheduledByDate(
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate date
-    ) {
-        List<AppointmentResponse> response = appointmentService.findScheduledByDate(date);
-
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(summary = "Cancela um agendamento pelo ID")
+        @Operation(summary = "Cancelar agendamento por ID")
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<AppointmentResponse> cancel(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> cancel(
             @PathVariable Long id
     ) {
         AppointmentResponse response = appointmentService.cancel(id);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success("Appointment cancelled successfully", response)
+        );
     }
 
-    @Operation(summary = "Conclui um agendamento pelo ID")
+        @Operation(summary = "Concluir agendamento por ID")
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<AppointmentResponse> complete(
+    public ResponseEntity<ApiResponse<AppointmentResponse>> complete(
             @PathVariable Long id
     ) {
         AppointmentResponse response = appointmentService.complete(id);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success("Appointment completed successfully", response)
+        );
     }
 }

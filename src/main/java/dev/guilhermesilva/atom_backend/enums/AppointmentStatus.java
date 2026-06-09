@@ -4,20 +4,37 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum AppointmentStatus {
-    SCHEDULED,
-    CANCELLED,
-    COMPLETED;
+
+    SCHEDULED("AGENDADO"),
+    CANCELLED("CANCELADO"),
+    COMPLETED("FINALIZADO");
+
+    private final String value;
+
+    AppointmentStatus(String value) {
+        this.value = value;
+    }
 
     @JsonValue
     public String getValue() {
-        return name();
+        return value;
     }
 
     @JsonCreator
-    public static AppointmentStatus fromString(String v) {
-        if (v == null) {
+    public static AppointmentStatus fromString(String value) {
+        if (value == null) {
             return null;
         }
-        return AppointmentStatus.valueOf(v.trim().toUpperCase());
+
+        String normalizedValue = value.trim().toUpperCase();
+
+        for (AppointmentStatus status : AppointmentStatus.values()) {
+            if (status.name().equalsIgnoreCase(normalizedValue)
+                    || status.value.equalsIgnoreCase(normalizedValue)) {
+                return status;
+            }
+        }
+
+        throw new IllegalArgumentException("Unknown AppointmentStatus: " + value);
     }
 }

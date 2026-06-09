@@ -1,7 +1,6 @@
 package dev.guilhermesilva.atom_backend.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,11 +12,8 @@ import java.time.LocalTime;
 @Setter
 public class AppointmentRequest {
 
-    @NotBlank(message = "Customer name is required")
-    private String customerName;
-
-    @NotBlank(message = "Customer phone is required")
-    private String customerPhone;
+    @NotNull(message = "Barber is required")
+    private Long barberId;
 
     @NotNull(message = "Service type is required")
     private Long serviceTypeId;

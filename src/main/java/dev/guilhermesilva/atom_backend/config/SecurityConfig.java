@@ -24,7 +24,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
     private final UserDetailsService userDetailsService;
 
     private static final String[] SWAGGER_WHITELIST = {
@@ -47,15 +46,31 @@ public class SecurityConfig {
                         // Swagger
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
-                        // Auth
+                        // Barber auth
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Public customer routes
+                        // Customer auth
+                        .requestMatchers("/api/customers/auth/**").permitAll()
+
+                        // Public route
                         .requestMatchers(HttpMethod.GET, "/api/service-types/active").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/appointments/available-times").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/appointments").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/barber/schedule").permitAll()
-                        // Everything else requires authentication
+
+                        // Customer routes
+                        .requestMatchers(HttpMethod.GET, "/api/barbers").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/available-times").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/appointments").hasRole("CUSTOMER")
+
+                        // Barber routes
+                        .requestMatchers(HttpMethod.GET, "/api/barber/schedule").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.POST, "/api/service-types").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.PUT, "/api/service-types/**").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/service-types/**").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.GET, "/api/service-types").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.GET, "/api/service-types/**").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.GET, "/api/appointments").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/date").hasRole("BARBER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").hasRole("BARBER")
+
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

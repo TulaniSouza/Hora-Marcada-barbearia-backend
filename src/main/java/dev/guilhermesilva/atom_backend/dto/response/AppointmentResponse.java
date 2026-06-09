@@ -1,6 +1,5 @@
 package dev.guilhermesilva.atom_backend.dto.response;
 
-
 import dev.guilhermesilva.atom_backend.enums.AppointmentStatus;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,9 +15,15 @@ public class AppointmentResponse {
 
     private Long id;
 
+    private Long customerId;
+
     private String customerName;
 
     private String customerPhone;
+
+    private Long barberId;
+
+    private String barberName;
 
     private LocalDate appointmentDate;
 

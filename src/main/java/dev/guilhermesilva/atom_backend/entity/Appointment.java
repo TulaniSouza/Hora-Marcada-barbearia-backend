@@ -19,6 +19,10 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /*
+     * Snapshot dos dados do cliente no momento do agendamento.
+     * Mesmo que o cliente altere o telefone depois, o agendamento antigo mantém os dados originais.
+     */
     @Column(nullable = false)
     private String customerName;
 
@@ -31,6 +35,14 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppointmentStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barber_id", nullable = false)
+    private Barber barber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_type_id", nullable = false)

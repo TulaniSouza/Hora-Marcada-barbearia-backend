@@ -4,14 +4,17 @@ import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.dto.response.AvailableTimeResponse;
 import dev.guilhermesilva.atom_backend.dto.response.BarberScheduleResponse;
 import dev.guilhermesilva.atom_backend.entity.Appointment;
+import dev.guilhermesilva.atom_backend.entity.Barber;
 import dev.guilhermesilva.atom_backend.entity.ServiceType;
 import dev.guilhermesilva.atom_backend.enums.AppointmentStatus;
 import dev.guilhermesilva.atom_backend.exception.BusinessException;
 import dev.guilhermesilva.atom_backend.exception.ResourceNotFoundException;
 import dev.guilhermesilva.atom_backend.mapper.AppointmentMapper;
 import dev.guilhermesilva.atom_backend.repository.AppointmentRepository;
+import dev.guilhermesilva.atom_backend.repository.BarberRepository;
 import dev.guilhermesilva.atom_backend.repository.ServiceTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +35,21 @@ public class ScheduleService {
 
     private final AppointmentRepository appointmentRepository;
     private final ServiceTypeRepository serviceTypeRepository;
+    private final BarberRepository barberRepository;
     private final AppointmentMapper appointmentMapper;
 
     @Transactional(readOnly = true)
     public List<AvailableTimeResponse> findAvailableTimes(
+            Long barberId,
             LocalDate date,
             Long serviceTypeId
     ) {
         validateBusinessDay(date);
+
+        Barber barber = barberRepository.findById(barberId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Barber not found with id: " + barberId
+                ));
 
         ServiceType serviceType = serviceTypeRepository.findByIdAndActiveTrue(serviceTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -50,7 +60,8 @@ public class ScheduleService {
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
 
         List<Appointment> scheduledAppointments = appointmentRepository
-                .findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                .findByBarberIdAndStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                        barber.getId(),
                         AppointmentStatus.SCHEDULED,
                         startOfDay,
                         endOfDay
@@ -64,10 +75,12 @@ public class ScheduleService {
     }
 
     @Transactional(readOnly = true)
-    public BarberScheduleResponse findBarberSchedule(
+    public BarberScheduleResponse findAuthenticatedBarberSchedule(
             LocalDate date,
             AppointmentStatus status
     ) {
+        Barber barber = getAuthenticatedBarber();
+
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
 
@@ -75,16 +88,18 @@ public class ScheduleService {
 
         if (status == null) {
             appointments = appointmentRepository
-                    .findByAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                    .findByBarberIdAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                            barber.getId(),
                             startOfDay,
                             endOfDay
                     );
         } else {
             appointments = appointmentRepository
-                    .findByAppointmentDateTimeBetweenAndStatusOrderByAppointmentDateTimeAsc(
+                    .findByBarberIdAndStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                            barber.getId(),
+                            status,
                             startOfDay,
-                            endOfDay,
-                            status
+                            endOfDay
                     );
         }
 
@@ -103,6 +118,15 @@ public class ScheduleService {
                 .build();
     }
 
+    private Barber getAuthenticatedBarber() {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        return barberRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
+    }
+
     private List<AvailableTimeResponse> generateAvailableTimes(
             LocalDate date,
             ServiceType serviceType,
@@ -112,20 +136,6 @@ public class ScheduleService {
                 serviceType.getDurationInMinutes()
         );
 
-        return generateTimeSlots(
-                date,
-                lastPossibleStartTime,
-                serviceType,
-                scheduledAppointments
-        );
-    }
-
-    private List<AvailableTimeResponse> generateTimeSlots(
-            LocalDate date,
-            LocalTime lastPossibleStartTime,
-            ServiceType serviceType,
-            List<Appointment> scheduledAppointments
-    ) {
         List<AvailableTimeResponse> availableTimes = new ArrayList<>();
 
         LocalTime currentTime = OPENING_TIME;

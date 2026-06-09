@@ -10,13 +10,13 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "barbers")
+@Table(name = "customers")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Barber implements UserDetails {
+public class Customer implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,6 +24,9 @@ public class Barber implements UserDetails {
 
     @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
+    private String phone;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -59,7 +62,7 @@ public class Barber implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(() -> "ROLE_BARBER");
+        return List.of(() -> "ROLE_CUSTOMER");
     }
 
     @Override
