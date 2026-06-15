@@ -52,8 +52,10 @@ public class SecurityConfig {
                         // Customer auth
                         .requestMatchers("/api/customers/auth/**").permitAll()
 
-                        // Public route
+                        // Public integration routes for n8n
                         .requestMatchers(HttpMethod.GET, "/api/service-types/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/agendamentos/lembretes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/clientes/*/quantidade-cortes").permitAll()
 
                         // Shared routes
                         .requestMatchers(HttpMethod.GET, "/api/barbers").hasAnyRole("CUSTOMER", "BARBER")

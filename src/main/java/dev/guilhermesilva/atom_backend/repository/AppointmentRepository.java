@@ -36,4 +36,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             LocalDateTime end,
             Pageable pageable
     );
+
+    List<Appointment> findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+            AppointmentStatus status,
+            LocalDateTime start,
+            LocalDateTime end
+    );
+
+    long countByCustomerIdAndStatus(Long customerId, AppointmentStatus status);
 }

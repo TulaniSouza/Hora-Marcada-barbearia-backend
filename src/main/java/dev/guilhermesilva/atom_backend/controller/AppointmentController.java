@@ -2,6 +2,7 @@ package dev.guilhermesilva.atom_backend.controller;
 
 import dev.guilhermesilva.atom_backend.dto.request.AppointmentRequest;
 import dev.guilhermesilva.atom_backend.dto.response.ApiResponse;
+import dev.guilhermesilva.atom_backend.dto.response.AppointmentReminderResponse;
 import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,8 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
-@RequestMapping("/api/appointments")
+@RequestMapping({"/api/appointments", "/api/v1/agendamentos"})
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Agendamentos", description = "Gerenciamento de agendamentos")
@@ -87,6 +89,16 @@ public class AppointmentController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("Appointment completed successfully", response)
+        );
+    }
+
+    @Operation(summary = "Listar lembretes dos próximos 24h para integração com n8n")
+    @GetMapping("/lembretes")
+    public ResponseEntity<ApiResponse<List<AppointmentReminderResponse>>> findRemindersForNext24Hours() {
+        List<AppointmentReminderResponse> response = appointmentService.findRemindersForNext24Hours();
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Reminders found successfully", response)
         );
     }
 }

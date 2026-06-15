@@ -1,6 +1,8 @@
 package dev.guilhermesilva.atom_backend.service;
 
 import dev.guilhermesilva.atom_backend.dto.request.AppointmentRequest;
+import dev.guilhermesilva.atom_backend.dto.response.AppointmentCompletedWebhookPayload;
+import dev.guilhermesilva.atom_backend.dto.response.AppointmentReminderResponse;
 import dev.guilhermesilva.atom_backend.dto.response.AppointmentResponse;
 import dev.guilhermesilva.atom_backend.entity.Appointment;
 import dev.guilhermesilva.atom_backend.entity.Barber;
@@ -15,17 +17,20 @@ import dev.guilhermesilva.atom_backend.repository.BarberRepository;
 import dev.guilhermesilva.atom_backend.repository.CustomerRepository;
 import dev.guilhermesilva.atom_backend.repository.ServiceTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +45,10 @@ public class AppointmentService {
     private final CustomerRepository customerRepository;
     private final BarberRepository barberRepository;
     private final AppointmentMapper appointmentMapper;
+    private final RestTemplate restTemplate;
+
+    @Value("${N8N_WEBHOOK_URL:}")
+    private String n8nWebhookUrl;
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest request) {
@@ -131,7 +140,58 @@ public class AppointmentService {
 
         Appointment updatedAppointment = appointmentRepository.save(appointment);
 
+        if (updatedAppointment.getStatus() == AppointmentStatus.COMPLETED) {
+            notifyCompletedAppointmentWebhook(updatedAppointment);
+        }
+
         return appointmentMapper.toResponse(updatedAppointment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentReminderResponse> findRemindersForNext24Hours() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime next24Hours = now.plusHours(24);
+
+        return appointmentRepository
+                .findByStatusAndAppointmentDateTimeBetweenOrderByAppointmentDateTimeAsc(
+                        AppointmentStatus.SCHEDULED,
+                        now,
+                        next24Hours
+                )
+                .stream()
+                .map(appointment -> AppointmentReminderResponse.builder()
+                        .nomeCliente(appointment.getCustomerName())
+                        .telefoneCliente(appointment.getCustomerPhone())
+                        .dataHorario(appointment.getAppointmentDateTime())
+                        .nomeBarbeiro(appointment.getBarber().getName())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long countCompletedAppointmentsByCustomer(Long customerId) {
+        return appointmentRepository.countByCustomerIdAndStatus(customerId, AppointmentStatus.COMPLETED);
+    }
+
+    private void notifyCompletedAppointmentWebhook(Appointment appointment) {
+        if (n8nWebhookUrl == null || n8nWebhookUrl.isBlank()) {
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                AppointmentCompletedWebhookPayload payload = AppointmentCompletedWebhookPayload.builder()
+                        .idCliente(appointment.getCustomer().getId())
+                        .nomeCliente(appointment.getCustomerName())
+                        .telefoneCliente(appointment.getCustomerPhone())
+                        .idAgendamento(appointment.getId())
+                        .build();
+
+                restTemplate.postForEntity(n8nWebhookUrl, payload, Void.class);
+            } catch (Exception ex) {
+                // Fallback silencioso para não quebrar o fluxo principal.
+            }
+        });
     }
 
     private Customer getAuthenticatedCustomer() {
