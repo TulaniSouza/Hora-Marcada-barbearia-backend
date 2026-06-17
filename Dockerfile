@@ -3,13 +3,11 @@ WORKDIR /workspace
 
 COPY pom.xml .
 
-RUN mvn dependency:get -Dartifact=org.projectlombok:lombok:1.18.30 -Ddest=/workspace/lombok.jar
-
-RUN mvn dependency:resolve-plugins dependency:resolve
+RUN mvn dependency:go-offline -B
 
 COPY src src
 
-RUN mvn clean package -DskipTests -Dmaven.compiler.fork=true -Dmaven.compiler.compilerArgs="-Xlint:none -J-javaagent:/workspace/lombok.jar"
+RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
@@ -19,9 +17,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=build /workspace/target/Atom_Backend-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
-
 ENV JAVA_OPTS=""
-
 USER app
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
