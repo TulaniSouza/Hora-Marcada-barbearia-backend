@@ -1,13 +1,18 @@
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
 
+# 1. Copia as configurações do projeto
 COPY pom.xml .
 
+# 2. Força o download do Lombok e de todos os plugins antes do código
+RUN mvn dependency:get -Dartifact=org.projectlombok:lombok:1.18.30
 RUN mvn dependency:resolve-plugins dependency:resolve
 
+# 3. Copia o código fonte
 COPY src src
 
-RUN mvn clean package -DskipTests
+# 4. Compila injetando o Lombok diretamente como agente do compilador
+RUN mvn clean package -DskipTests -Dmaven.compiler.annotationProcessorPaths=org.projectlombok:lombok:1.18.30
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
