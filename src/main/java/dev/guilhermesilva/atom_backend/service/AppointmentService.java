@@ -47,7 +47,7 @@ public class AppointmentService {
     private final AppointmentMapper appointmentMapper;
     private final RestTemplate restTemplate;
 
-    @Value("${N8N_WEBHOOK_URL:}")
+    @Value("${application.integration.n8n.webhook-url:}")
     private String n8nWebhookUrl;
 
     @Transactional

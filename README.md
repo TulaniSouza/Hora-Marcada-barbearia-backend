@@ -54,6 +54,23 @@ Isso sobe a API na porta `8080` e o Postgres na porta `5432`. A API já vem conf
 
 Se quiser subir só a imagem da API e conectar em um banco já existente, use as mesmas variáveis no `docker run`.
 
+Deploy no Render (Web Service):
+
+1. Conecte este repositório no Render.
+2. Selecione `Docker` como runtime (o projeto já possui `Dockerfile`).
+3. Configure as variáveis de ambiente obrigatórias:
+   - `SPRING_DATASOURCE_URL`
+   - `SPRING_DATASOURCE_USERNAME`
+   - `SPRING_DATASOURCE_PASSWORD`
+   - `JWT_SECRET_KEY`
+   - `JWT_EXPIRATION` (opcional, padrão: `86400000`)
+   - `CORS_ALLOWED_ORIGINS` (ex.: URL do frontend em produção e localhost de desenvolvimento separados por vírgula)
+4. Variável opcional para integração ativa com n8n:
+   - `N8N_WEBHOOK_URL`
+
+Observação importante para Render:
+- A aplicação usa `server.port=${PORT:${SERVER_PORT:8080}}`, portanto em Render ela passa a respeitar a variável `PORT` automaticamente.
+
 Documentação e testes:
 
 - A API expõe documentação OpenAPI/Swagger conforme configurado em `OpenApiConfig`.
