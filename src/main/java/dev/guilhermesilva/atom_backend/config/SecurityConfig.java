@@ -37,7 +37,7 @@ public class SecurityConfig {
     private String corsAllowedOrigins;
 
     private static final String[] SWAGGER_WHITELIST = {
-            "/"
+            "/",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
