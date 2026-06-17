@@ -3,12 +3,13 @@ WORKDIR /workspace
 
 COPY pom.xml .
 
-RUN mvn dependency:get -Dartifact=org.projectlombok:lombok:1.18.30
+RUN mvn dependency:get -Dartifact=org.projectlombok:lombok:1.18.30 -Ddest=/workspace/lombok.jar
+
 RUN mvn dependency:resolve-plugins dependency:resolve
 
 COPY src src
 
-RUN mvn clean package -DskipTests -Dmaven.compiler.annotationProcessorPaths=org.projectlombok:lombok:1.18.30,org.projectlombok:lombok-mapstruct-binding:0.2.0,org.mapstruct:mapstruct-processor:1.5.5.Final
+RUN mvn clean package -DskipTests -Dmaven.compiler.fork=true -Dmaven.compiler.compilerArgs="-Xlint:none -J-javaagent:/workspace/lombok.jar"
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
