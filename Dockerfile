@@ -1,5 +1,7 @@
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
+RUN java -version
+RUN mvn -version
 
 COPY pom.xml .
 

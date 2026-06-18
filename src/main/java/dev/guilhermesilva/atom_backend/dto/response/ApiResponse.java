@@ -1,12 +1,16 @@
 package dev.guilhermesilva.atom_backend.dto.response;
 
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ApiResponse<T> {
 
     private Boolean success;
